@@ -7,81 +7,110 @@ from login.models import User as LoginUser
 logger = logging.getLogger(__name__)
 
 
-# ── Menu Permission Serializer ───────────────────────────────────────────
 class MenuPermissionSerializer(serializers.ModelSerializer):
+    username = serializers.SerializerMethodField(read_only=True)
+    allowed_menus = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
-        model = MenuPermission
+        model  = MenuPermission
         fields = [
+            "username",
             "dashboard",
             "col_reports",
+            "vm_trips",
+            "vm_service",
             "um_users",
             "um_roles",
+            "mm_vehicle",
+            "allowed_menus",
             "updated_at",
         ]
-        read_only_fields = ["updated_at"]
+        read_only_fields = ["username", "allowed_menus", "updated_at"]
 
-    def validate_dashboard(self, value):
-        if value is not None and not isinstance(value, bool):
-            raise serializers.ValidationError("dashboard must be a boolean")
-        return value if value is not None else False
+    def get_username(self, obj):
+        return obj.login_user.username if obj.login_user else None
 
-    def validate_col_reports(self, value):
-        if value is not None and not isinstance(value, bool):
-            raise serializers.ValidationError("col_reports must be a boolean")
-        return value if value is not None else False
+    def get_allowed_menus(self, obj):
+        try:
+            return obj.allowed_menus()
+        except Exception:
+            return []
 
-    def validate_um_users(self, value):
-        if value is not None and not isinstance(value, bool):
-            raise serializers.ValidationError("um_users must be a boolean")
-        return value if value is not None else False
+    def _bool(self, value):
+        if value is None:
+            return False
+        if not isinstance(value, bool):
+            raise serializers.ValidationError("Must be a boolean.")
+        return value
 
-    def validate_um_roles(self, value):
-        if value is not None and not isinstance(value, bool):
-            raise serializers.ValidationError("um_roles must be a boolean")
-        return value if value is not None else False
+    def validate_dashboard(self,   v): return self._bool(v)
+    def validate_col_reports(self, v): return self._bool(v)
+    def validate_vm_trips(self,    v): return self._bool(v)
+    def validate_vm_service(self,  v): return self._bool(v)
+    def validate_um_users(self,    v): return self._bool(v)
+    def validate_um_roles(self,    v): return self._bool(v)
+    def validate_mm_vehicle(self,  v): return self._bool(v)
 
 
-# ── Login User with Permissions ──────────────────────────────────────────
 class LoginUserWithPermissionsSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
+    full_name        = serializers.SerializerMethodField()
+    photo_url        = serializers.SerializerMethodField()
     menu_permissions = serializers.SerializerMethodField()
+    allowed_menus   = serializers.SerializerMethodField()
 
     class Meta:
-        model = LoginUser
-        fields = [
-            "id",
-            "username",
-            "full_name",
-            "email",
-            "role",
-            "status",
-            "menu_permissions",
-        ]
+        model  = LoginUser
+        fields = ["id", "username", "full_name", "email",
+                  "role", "status", "photo_url", "menu_permissions", "allowed_menus"]
         read_only_fields = fields
 
     def get_full_name(self, obj):
-        first = (obj.first_name or "").strip()
-        last = (obj.last_name or "").strip()
-        full = f"{first} {last}".strip()
-        return full if full else (obj.username or "")
+        first = (getattr(obj, "first_name", "") or "").strip()
+        last  = (getattr(obj, "last_name",  "") or "").strip()
+        full  = f"{first} {last}".strip()
+        return full or (obj.username or "")
 
     def get_menu_permissions(self, obj):
+        _empty = {
+            "username": obj.username,
+            "dashboard": False, "col_reports": False,
+            "vm_trips": False,  "vm_service": False,
+            "um_users": False,  "um_roles": False,
+            "mm_vehicle": False, "allowed_menus": [],
+        }
         try:
-            # Use the related_name to access permissions
             return MenuPermissionSerializer(obj.menu_permissions).data
         except MenuPermission.DoesNotExist:
-            logger.debug(f"No permissions found for user {obj.pk}, returning defaults")
-            return {
-                "dashboard": False,
-                "col_reports": False,
-                "um_users": False,
-                "um_roles": False,
-            }
+            return _empty
         except Exception as e:
-            logger.error(f"Error fetching permissions for user {obj.pk}: {str(e)}")
-            return {
-                "dashboard": False,
-                "col_reports": False,
-                "um_users": False,
-                "um_roles": False,
-            }
+            logger.error(f"Error fetching permissions for user {obj.pk}: {e}")
+            return _empty
+
+    def get_photo_url(self, obj):
+        photo = getattr(obj, "photo", None)
+        if not photo:
+            return None
+        request = self.context.get("request")
+        if hasattr(photo, "name") and photo.name:
+            try:
+                if request:
+                    return request.build_absolute_uri(photo.url)
+                return photo.url
+            except Exception:
+                return None
+        if isinstance(photo, str) and photo:
+            if request:
+                from django.conf import settings
+                return request.build_absolute_uri(f"{settings.MEDIA_URL}{photo}")
+            return photo
+        return None
+
+    def get_allowed_menus(self, obj):
+        try:
+            perm = obj.menu_permissions
+            return perm.allowed_menus() if perm else []
+        except MenuPermission.DoesNotExist:
+            return []
+        except Exception as e:
+            logger.error(f"Error fetching allowed_menus for user {obj.pk}: {e}")
+            return []

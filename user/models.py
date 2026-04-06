@@ -13,6 +13,14 @@ class Branch(models.Model):
         return self.name
 
 
+def user_photo_upload_path(instance, filename):
+    """Upload to  media/user_photos/<username>/<filename>"""
+    import os
+    ext = os.path.splitext(filename)[1].lower()
+    safe_name = getattr(instance, "username", "user").replace(" ", "_")
+    return f"user_photos/{safe_name}/{safe_name}{ext}"
+
+
 class User(models.Model):
     ROLE_CHOICES = [
         ("Admin",    "Admin"),
@@ -35,6 +43,14 @@ class User(models.Model):
     branch     = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, related_name="users")
     role       = models.CharField(max_length=20, choices=ROLE_CHOICES)
     status     = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Active")
+    # ── NEW ──────────────────────────────────────────────────────────────────
+    photo      = models.ImageField(
+        upload_to=user_photo_upload_path,
+        null=True,
+        blank=True,
+        help_text="Optional profile photo (JPEG / PNG, max 5 MB)",
+    )
+    # ─────────────────────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

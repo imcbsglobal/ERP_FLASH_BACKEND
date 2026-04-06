@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'user',
     'payments',
     'usercontrol',
+    'vehiclemaster',
+    'vehiclemanagement',
     
 ]
 

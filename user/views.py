@@ -5,6 +5,7 @@ from rest_framework import status as drf_status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.hashers import check_password, make_password
 
@@ -63,6 +64,11 @@ def _enrich_many(users):
     for u in users:
         u._branch_name = names.get(getattr(u, "branch_id", None))
     return users
+
+
+def _serializer_context(request):
+    """Shared context dict passed to every serializer so photo_url resolves."""
+    return {"request": request}
 
 
 # ── Branch views ──────────────────────────────────────────────────────────────
@@ -162,6 +168,8 @@ class LoginView(APIView):
 class UserListCreateView(APIView):
     authentication_classes = []
     permission_classes     = [AllowAny]
+    # ── Accept both JSON (existing) and multipart/form-data (photo upload) ──
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
         try:
@@ -178,19 +186,35 @@ class UserListCreateView(APIView):
             # Backfill MenuPermission rows for any users that don't have one yet
             for u in users:
                 _ensure_menu_permission(u.id)
+            ctx = _serializer_context(request)
             return Response({"count": len(users),
-                             "results": UserReadSerializer(users, many=True).data})
+                             "results": UserReadSerializer(users, many=True, context=ctx).data})
         except Exception as e:
             logger.error(f"UserList.get: {e}\n{traceback.format_exc()}")
             return Response({"detail": str(e)}, status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
         try:
-            s = UserWriteSerializer(data=request.data, context={"UserModel": LoginUser})
+            photo_file = request.FILES.get("photo")
+
+            # request.data is a QueryDict when multipart; .dict() flattens it
+            data = request.data.dict() if hasattr(request.data, "dict") else dict(request.data)
+            data.pop("photo", None)  # remove file key — handled via context
+
+            # Frontend sends "branch" (integer id); serializer expects "branch_id"
+            if "branch" in data and "branch_id" not in data:
+                data["branch_id"] = data.pop("branch")
+
+            ctx = {
+                **_serializer_context(request),
+                "UserModel":  LoginUser,
+                "photo_file": photo_file,
+            }
+            s = UserWriteSerializer(data=data, context=ctx)
             if s.is_valid():
                 user = _enrich(s.save())
                 _ensure_menu_permission(user.id)
-                return Response(UserReadSerializer(user).data,
+                return Response(UserReadSerializer(user, context=_serializer_context(request)).data,
                                 status=drf_status.HTTP_201_CREATED)
             return Response(s.errors, status=drf_status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -201,23 +225,36 @@ class UserListCreateView(APIView):
 class UserDetailView(APIView):
     authentication_classes = []
     permission_classes     = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def _get(self, pk):
         return get_object_or_404(_user_qs(), pk=pk)
 
     def get(self, request, pk):
         try:
-            return Response(UserReadSerializer(_enrich(self._get(pk))).data)
+            ctx = _serializer_context(request)
+            return Response(UserReadSerializer(_enrich(self._get(pk)), context=ctx).data)
         except Exception as e:
             logger.error(f"UserDetail.get({pk}): {e}\n{traceback.format_exc()}")
             return Response({"detail": str(e)}, status=drf_status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def put(self, request, pk):
         try:
-            obj = self._get(pk)
-            s = UserWriteSerializer(obj, data=request.data, context={"UserModel": LoginUser})
+            obj        = self._get(pk)
+            photo_file = request.FILES.get("photo")
+            data       = request.data.dict() if hasattr(request.data, "dict") else dict(request.data)
+            data.pop("photo", None)
+            # Frontend sends "branch"; serializer expects "branch_id"
+            if "branch" in data and "branch_id" not in data:
+                data["branch_id"] = data.pop("branch")
+            ctx = {
+                **_serializer_context(request),
+                "UserModel":  LoginUser,
+                "photo_file": photo_file,
+            }
+            s = UserWriteSerializer(obj, data=data, context=ctx)
             if s.is_valid():
-                return Response(UserReadSerializer(_enrich(s.save())).data)
+                return Response(UserReadSerializer(_enrich(s.save()), context=_serializer_context(request)).data)
             return Response(s.errors, status=drf_status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"UserDetail.put({pk}): {e}\n{traceback.format_exc()}")
@@ -225,11 +262,21 @@ class UserDetailView(APIView):
 
     def patch(self, request, pk):
         try:
-            obj = self._get(pk)
-            s = UserWriteSerializer(obj, data=request.data, partial=True,
-                                    context={"UserModel": LoginUser})
+            obj        = self._get(pk)
+            photo_file = request.FILES.get("photo")
+            data       = request.data.dict() if hasattr(request.data, "dict") else dict(request.data)
+            data.pop("photo", None)
+            # Frontend sends "branch"; serializer expects "branch_id"
+            if "branch" in data and "branch_id" not in data:
+                data["branch_id"] = data.pop("branch")
+            ctx = {
+                **_serializer_context(request),
+                "UserModel":  LoginUser,
+                "photo_file": photo_file,
+            }
+            s = UserWriteSerializer(obj, data=data, partial=True, context=ctx)
             if s.is_valid():
-                return Response(UserReadSerializer(_enrich(s.save())).data)
+                return Response(UserReadSerializer(_enrich(s.save()), context=_serializer_context(request)).data)
             return Response(s.errors, status=drf_status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"UserDetail.patch({pk}): {e}\n{traceback.format_exc()}")

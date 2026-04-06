@@ -49,6 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     address    = models.CharField(max_length=255, blank=True)
     phone      = models.CharField(max_length=20, blank=True)
     branch_id  = models.IntegerField(null=True, blank=True)   # stores users.Branch PK
+    photo      = models.ImageField(upload_to='user_photos/', null=True, blank=True, help_text='Optional profile photo (JPEG/PNG)')
     status     = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
 
     # Django auth flags

@@ -14,6 +14,21 @@ from login.models import User as LoginUser
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_MENU_KEYS = ["dashboard", "col_reports", "vm_trips", "vm_service", "um_users", "um_roles", "mm_vehicle"]
+
+def normalize_permission_payload(data):
+    """Convert allowed_menus list into explicit booleans for serializer input."""
+    if not isinstance(data, dict):
+        return data
+
+    data = data.copy()
+    if "allowed_menus" in data:
+        selected = set(data.get("allowed_menus") or [])
+        for key in ALLOWED_MENU_KEYS:
+            data[key] = key in selected
+
+    return data
+
 
 # ── List all login.User rows with permissions attached ────────────────────
 class LoginUserListView(APIView):
@@ -31,10 +46,11 @@ class LoginUserListView(APIView):
         if search:
             qs = qs.filter(username__icontains=search)
 
-        # Prefetch permissions for better performance
         qs = qs.prefetch_related('menu_permissions')
-        
-        serializer = LoginUserWithPermissionsSerializer(qs, many=True)
+
+        serializer = LoginUserWithPermissionsSerializer(
+            qs, many=True, context={"request": request}
+        )
         return Response({"count": qs.count(), "results": serializer.data})
 
 
@@ -68,7 +84,8 @@ class UserPermissionsView(APIView):
             if created:
                 logger.info(f"Created new MenuPermission for user {user.username} (ID: {pk}) before update")
 
-            serializer = MenuPermissionSerializer(menu_perm, data=request.data, partial=True)
+            payload = normalize_permission_payload(request.data)
+            serializer = MenuPermissionSerializer(menu_perm, data=payload, partial=True)
             if not serializer.is_valid():
                 logger.error(f"Validation errors for user {pk}: {serializer.errors}")
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -77,7 +94,9 @@ class UserPermissionsView(APIView):
             logger.info(
                 f"Saved permissions for user {user.username} (ID: {pk}): "
                 f"dashboard={saved_perm.dashboard}, col_reports={saved_perm.col_reports}, "
-                f"um_users={saved_perm.um_users}, um_roles={saved_perm.um_roles}"
+                f"vm_trips={saved_perm.vm_trips}, vm_service={saved_perm.vm_service}, "
+                f"um_users={saved_perm.um_users}, um_roles={saved_perm.um_roles}, "
+                f"mm_vehicle={saved_perm.mm_vehicle}"
             )
             return Response(serializer.data)
         except LoginUser.DoesNotExist:
@@ -112,8 +131,12 @@ class BulkMenuPermissionView(generics.GenericAPIView):
             try:
                 user = LoginUser.objects.get(pk=user_id)
                 menu_perm, _ = MenuPermission.objects.get_or_create(login_user=user)
-                serializer = MenuPermissionSerializer(menu_perm, data=item, partial=True)
-                
+
+                item_data = normalize_permission_payload(item)
+                serializer_data = {k: item_data[k] for k in ALLOWED_MENU_KEYS if k in item_data}
+
+                serializer = MenuPermissionSerializer(menu_perm, data=serializer_data, partial=True)
+
                 if serializer.is_valid():
                     serializer.save()
                     updated.append({"user_id": user_id, **serializer.data})

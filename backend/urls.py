@@ -44,6 +44,7 @@ urlpatterns = [
     path('api/payments/', include('payments.urls')),
     path('api/',          include('vehiclemaster.urls')),
     path('api/',          include('vehiclemanagement.urls')),
+    path('api/challan/',  include('challan.urls')),
 ]
 
 if settings.DEBUG:

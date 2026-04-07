@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'usercontrol',
     'vehiclemaster',
     'vehiclemanagement',
-    
+    'challan'
 ]
 
 # ── Middleware ────────────────────────────────────────────────

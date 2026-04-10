@@ -1,4 +1,4 @@
-from django.db.models              import Sum, Count, Q   # ← fixed: Q imported here
+from django.db.models              import Sum, Count, Q
 from rest_framework                 import status
 from rest_framework.generics        import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.parsers         import MultiPartParser, FormParser, JSONParser
@@ -6,6 +6,7 @@ from rest_framework.response        import Response
 from rest_framework.views           import APIView
 from django_filters.rest_framework  import DjangoFilterBackend
 from rest_framework.filters         import SearchFilter, OrderingFilter
+import requests
 
 from .models       import Payment
 from .serializers  import PaymentSerializer, PaymentStatusUpdateSerializer
@@ -103,9 +104,95 @@ class PaymentSummaryView(APIView):
         data = qs.aggregate(
             total_amount    = Sum('amount'),
             total_count     = Count('id'),
-            completed_count = Count('id', filter=Q(status='Completed')),   # ← was models.Q (wrong)
+            completed_count = Count('id', filter=Q(status='Completed')),
             pending_count   = Count('id', filter=Q(status='Pending')),
             failed_count    = Count('id', filter=Q(status='Failed')),
         )
         data['total_amount'] = data['total_amount'] or 0
         return Response(data)
+
+
+class FlashERPDebtorsProxyView(APIView):
+    """
+    GET /api/payments/flasherp/debtors/
+    Proxies the FlashERP debtor list server-side so the browser
+    never hits flasherp.imcbs.com directly (avoids CORS).
+
+    Pagination: pass ?next=<url> to fetch subsequent pages.
+    The frontend can also pass ?page=N if FlashERP supports it.
+    """
+
+    FLASHERP_DEBTORS_URL = 'https://flasherp.imcbs.com/api/debtors/'
+
+    def get(self, request):
+        # Allow the frontend to request a specific page URL (for pagination)
+        target_url = request.query_params.get('next') or self.FLASHERP_DEBTORS_URL
+
+        # Forward all other query params (e.g. ?page=2) except 'next'
+        params = {k: v for k, v in request.query_params.items() if k != 'next'}
+
+        # Use the FlashERP token forwarded from the frontend,
+        # or fall back to a server-side env setting if available.
+        flasherp_token = request.headers.get('X-Flasherp-Token')
+        headers = {'Accept': 'application/json'}
+        if flasherp_token:
+            headers['Authorization'] = f'Token {flasherp_token}'
+
+        try:
+            resp = requests.get(target_url, params=params, headers=headers, timeout=15)
+            resp.raise_for_status()
+            return Response(resp.json(), status=resp.status_code)
+
+        except requests.exceptions.ConnectionError:
+            return Response(
+                {'detail': 'Cannot reach FlashERP server. Check your internet connection.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except requests.exceptions.Timeout:
+            return Response(
+                {'detail': 'FlashERP server timed out. Please try again.'},
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+            )
+        except requests.exceptions.HTTPError:
+            return Response(
+                {'detail': f'FlashERP returned an error: {resp.status_code}'},
+                status=resp.status_code,
+            )
+
+
+class FlashERPDepartmentsProxyView(APIView):
+    """
+    GET /api/payments/flasherp/departments/
+    Proxies the FlashERP departments list server-side.
+    """
+
+    FLASHERP_DEPARTMENTS_URL = 'https://flasherp.imcbs.com/api/departments/'
+
+    def get(self, request):
+        target_url = self.FLASHERP_DEPARTMENTS_URL
+        
+        flasherp_token = request.headers.get('X-Flasherp-Token')
+        headers = {'Accept': 'application/json'}
+        if flasherp_token:
+            headers['Authorization'] = f'Token {flasherp_token}'
+
+        try:
+            resp = requests.get(target_url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            return Response(resp.json(), status=resp.status_code)
+            
+        except requests.exceptions.ConnectionError:
+            return Response(
+                {'detail': 'Cannot reach FlashERP server. Check your internet connection.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except requests.exceptions.Timeout:
+            return Response(
+                {'detail': 'FlashERP server timed out. Please try again.'},
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+            )
+        except requests.exceptions.HTTPError:
+            return Response(
+                {'detail': f'FlashERP returned an error: {resp.status_code}'},
+                status=resp.status_code,
+            )

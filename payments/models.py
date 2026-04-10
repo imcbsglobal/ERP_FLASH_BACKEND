@@ -19,6 +19,9 @@ class Payment(models.Model):
     ]
 
     client_name     = models.CharField(max_length=255)
+    place           = models.CharField(max_length=255, blank=True, default='')
+    phone_number    = models.CharField(max_length=20, blank=True, default='')
+    department      = models.CharField(max_length=255, blank=True, default='')
     branch          = models.CharField(max_length=255)
     collection_type = models.CharField(max_length=50, choices=COLLECTION_TYPE_CHOICES)
     amount          = models.DecimalField(max_digits=12, decimal_places=2)

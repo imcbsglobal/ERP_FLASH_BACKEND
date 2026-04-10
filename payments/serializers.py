@@ -11,6 +11,9 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'client_name',
+            'place',
+            'phone_number',
+            'department',
             'branch',
             'collection_type',
             'amount',

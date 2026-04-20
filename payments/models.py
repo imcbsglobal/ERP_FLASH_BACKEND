@@ -15,7 +15,7 @@ class Payment(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
         ('Completed', 'Completed'),
-        ('Failed', 'Failed'),
+        ('Rejected', 'Rejected'),
     ]
 
     client_name     = models.CharField(max_length=255)

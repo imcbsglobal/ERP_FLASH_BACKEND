@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/',          include('vehiclemaster.urls')),
     path('api/',          include('vehiclemanagement.urls')),
     path('api/challan/',  include('challan.urls')),
+    path("api/claims/", include("claims.urls")),
 ]
 
 if settings.DEBUG:

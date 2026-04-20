@@ -2,12 +2,21 @@ from pathlib import Path
 from datetime import timedelta
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── Security ──────────────────────────────────────────────────
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+"flasherp.in",
+"[www.flasherp.in](http://www.flasherp.in)",
+"localhost",
+"127.0.0.1"
+]
+
 
 # ── Installed Apps ────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -32,7 +41,8 @@ INSTALLED_APPS = [
     'usercontrol',
     'vehiclemaster',
     'vehiclemanagement',
-    'challan'
+    'challan',
+    'claims'
 ]
 
 # ── Middleware ────────────────────────────────────────────────
@@ -69,14 +79,16 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 ASGI_APPLICATION  = 'backend.asgi.application'
 
 # ── Database ──────────────────────────────────────────────────
+
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'collect',
-        'USER': 'postgres',
-        'PASSWORD': '12345',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': os.getenv('DB_ENGINE'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
     }
 }
 
@@ -139,6 +151,7 @@ SIMPLE_JWT = {
 
 # ── CORS ──────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
+    "https://flasherp.in", "https://www.flasherp.in",
     'http://localhost:5173',    # Vite dev server
     'http://localhost:3000',
     'http://127.0.0.1:5173',

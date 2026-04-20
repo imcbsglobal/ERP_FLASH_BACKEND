@@ -43,6 +43,7 @@ class TravelTripListSerializer(serializers.ModelSerializer):
             'purpose_of_trip',
             'date',
             'start_time',
+            'end_date',
             'end_time',
             'odometer_start',
             'odometer_end',
@@ -162,6 +163,7 @@ class EndTripSerializer(serializers.ModelSerializer):
         model = TravelTrip
         fields = [
             'id',
+            'end_date',
             'end_time',
             'odometer_end',
             'fuel_cost',

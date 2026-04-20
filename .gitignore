@@ -1,0 +1,77 @@
+# Python
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+
+venv/
+env/
+ENV/
+.venv/
+
+# Environment variables
+
+.env
+.env.*
+
+# Django stuff
+
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Static & Media (optional depending on setup)
+
+staticfiles/
+media/
+
+# Migrations (optional: keep if working in team)
+
+# **/migrations/*
+
+# !**/migrations/**init**.py
+
+# IDEs / Editors
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Testing / Coverage
+
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Build files
+
+dist/
+build/
+*.egg-info/
+
+# Node (if using frontend tools)
+
+node_modules/
+
+# Logs
+
+*.log
+
+# Backup files
+
+*.bak
+
+# Docker (if used)
+
+*.pid
+*.seed
+*.pid.lock

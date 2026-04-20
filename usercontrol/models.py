@@ -20,6 +20,8 @@ class MenuPermission(models.Model):
     # User Management
     um_users    = models.BooleanField(default=False)
     um_roles    = models.BooleanField(default=False)
+    # Claims
+    cl_list     = models.BooleanField(default=False)
     # Master
     mm_vehicle  = models.BooleanField(default=False)
 

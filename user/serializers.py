@@ -96,7 +96,7 @@ class UserWriteSerializer(serializers.Serializer):
     role      = serializers.CharField(max_length=20)
     status    = serializers.CharField(max_length=10, default="Active")
 
-    ROLE_CHOICES   = ["Admin", "Manager", "Operator", "Viewer", "Support", "Auditor"]
+    ROLE_CHOICES   = ["Admin", "Manager", "User"]
     STATUS_CHOICES = ["Active", "Inactive"]
 
     def _model(self):

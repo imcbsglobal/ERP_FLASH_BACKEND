@@ -28,12 +28,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     """Custom user model — username-based authentication."""
 
     class Role(models.TextChoices):
-        ADMIN    = 'Admin',    'Admin'
-        MANAGER  = 'Manager',  'Manager'
-        OPERATOR = 'Operator', 'Operator'
-        VIEWER   = 'Viewer',   'Viewer'
-        SUPPORT  = 'Support',  'Support'
-        AUDITOR  = 'Auditor',  'Auditor'
+        ADMIN   = 'Admin',   'Admin'
+        MANAGER = 'Manager', 'Manager'
+        USER    = 'User',    'User'
 
     class Status(models.TextChoices):
         ACTIVE   = 'Active',   'Active'
@@ -44,7 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email      = models.EmailField(blank=True)
     first_name = models.CharField(max_length=60, blank=True)
     last_name  = models.CharField(max_length=60, blank=True)
-    role       = models.CharField(max_length=20, choices=Role.choices, default=Role.OPERATOR)
+    role       = models.CharField(max_length=20, choices=Role.choices, default=Role.USER)
 
     address    = models.CharField(max_length=255, blank=True)
     phone      = models.CharField(max_length=20, blank=True)

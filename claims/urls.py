@@ -4,6 +4,7 @@ from .views import (
     ClaimRetrieveUpdateDestroyView,
     ClaimStatusUpdateView,
     ClaimDraftCreateView,
+    DepartmentListView,
 )
 
 app_name = "claims"
@@ -20,4 +21,7 @@ urlpatterns = [
 
     # Update only the status field (used by the inline status dropdown)
     path("<int:pk>/status/", ClaimStatusUpdateView.as_view(), name="claim-status"),
+
+    # Proxy for external ERP departments API (cached 5 min)
+    path("departments/", DepartmentListView.as_view(), name="department-list"),
 ]

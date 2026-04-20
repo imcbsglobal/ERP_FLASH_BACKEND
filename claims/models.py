@@ -16,16 +16,6 @@ class Claim(models.Model):
         ("toll",            "Toll Expense"),
     ]
 
-    DEPARTMENT_CHOICES = [
-        ("engineering", "Engineering"),
-        ("marketing",   "Marketing"),
-        ("sales",       "Sales"),
-        ("hr",          "Human Resources"),
-        ("finance",     "Finance"),
-        ("operations",  "Operations"),
-        ("design",      "Design"),
-    ]
-
     STATUS_CHOICES = [
         ("Pending",  "Pending"),
         ("Approved", "Approved"),
@@ -41,7 +31,9 @@ class Claim(models.Model):
         related_name="claims",
     )
     expense_type = models.CharField(max_length=30, choices=EXPENSE_TYPE_CHOICES)
-    department   = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES)
+    # department stores the department_id from the external ERP API (e.g. "1", "DF").
+    # No choices= so any value from the live API is accepted without migration churn.
+    department   = models.CharField(max_length=20)
     client_name  = models.CharField(max_length=255)
     purpose      = models.CharField(max_length=500)
     amount       = models.DecimalField(max_digits=10, decimal_places=2)

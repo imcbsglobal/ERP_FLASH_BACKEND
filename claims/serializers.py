@@ -11,12 +11,9 @@ class ClaimSerializer(serializers.ModelSerializer):
 
     claimed_by_name = serializers.SerializerMethodField(read_only=True)
 
-    # Human-readable labels for choice fields
+    # Human-readable label for expense_type choice field
     expense_type_display = serializers.CharField(
         source="get_expense_type_display", read_only=True
-    )
-    department_display = serializers.CharField(
-        source="get_department_display", read_only=True
     )
 
     class Meta:
@@ -28,7 +25,6 @@ class ClaimSerializer(serializers.ModelSerializer):
             "expense_type",
             "expense_type_display",
             "department",
-            "department_display",
             "client_name",
             "purpose",
             "amount",
@@ -42,18 +38,14 @@ class ClaimSerializer(serializers.ModelSerializer):
 
     def get_claimed_by_name(self, obj):
         if obj.claimed_by:
-            # Try to get full name if available
             if hasattr(obj.claimed_by, 'get_full_name') and callable(obj.claimed_by.get_full_name):
                 full_name = obj.claimed_by.get_full_name()
                 if full_name:
                     return full_name
-            # Try username
             if hasattr(obj.claimed_by, 'username'):
                 return obj.claimed_by.username
-            # Try email
             if hasattr(obj.claimed_by, 'email'):
                 return obj.claimed_by.email
-            # Fallback to ID
             return f"User {obj.claimed_by.id}"
         return None
 
@@ -63,7 +55,6 @@ class ClaimSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # Automatically assign the logged-in user as claimed_by
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
             validated_data["claimed_by"] = request.user
@@ -75,15 +66,11 @@ class ClaimSerializer(serializers.ModelSerializer):
 class ClaimListSerializer(serializers.ModelSerializer):
     """
     Lightweight serializer used only for list responses.
-    Avoids sending heavy fields like notes/receipt in bulk.
     """
 
     claimed_by_name = serializers.SerializerMethodField(read_only=True)
     expense_type_display = serializers.CharField(
         source="get_expense_type_display", read_only=True
-    )
-    department_display = serializers.CharField(
-        source="get_department_display", read_only=True
     )
     receipt = serializers.FileField(read_only=True)
     has_receipt = serializers.SerializerMethodField(read_only=True)
@@ -96,7 +83,6 @@ class ClaimListSerializer(serializers.ModelSerializer):
             "expense_type",
             "expense_type_display",
             "department",
-            "department_display",
             "client_name",
             "amount",
             "receipt",
@@ -107,18 +93,14 @@ class ClaimListSerializer(serializers.ModelSerializer):
 
     def get_claimed_by_name(self, obj):
         if obj.claimed_by:
-            # Try to get full name if available
             if hasattr(obj.claimed_by, 'get_full_name') and callable(obj.claimed_by.get_full_name):
                 full_name = obj.claimed_by.get_full_name()
                 if full_name:
                     return full_name
-            # Try username
             if hasattr(obj.claimed_by, 'username'):
                 return obj.claimed_by.username
-            # Try email
             if hasattr(obj.claimed_by, 'email'):
                 return obj.claimed_by.email
-            # Fallback to ID
             return f"User {obj.claimed_by.id}"
         return None
 

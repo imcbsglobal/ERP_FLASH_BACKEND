@@ -1,3 +1,5 @@
+import requests as http_requests
+
 from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,6 +13,8 @@ from .serializers import (
     ClaimListSerializer,
     ClaimStatusUpdateSerializer,
 )
+
+DEPARTMENTS_API_URL = "https://flasherp.imcbs.com/api/departments/"
 
 
 class ClaimListCreateView(generics.ListCreateAPIView):
@@ -109,3 +113,53 @@ class ClaimDraftCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(status="Draft", claimed_by=self.request.user)
+
+class DepartmentListView(APIView):
+    """
+    GET /api/claims/departments/
+    Proxies the external ERP departments API and returns a normalised list:
+        [{ "department_id": "1", "department": "CROCKERY AND GIFTS" }, ...]
+    Results are cached in memory for 5 minutes to avoid hammering the upstream API.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    _cache: dict = {"data": None, "expires_at": 0}
+
+    def get(self, request):
+        import time
+
+        now = time.time()
+
+        # Return cached data if still fresh (5-minute TTL)
+        if self._cache["data"] is not None and now < self._cache["expires_at"]:
+            return Response(self._cache["data"])
+
+        try:
+            resp = http_requests.get(DEPARTMENTS_API_URL, timeout=10)
+            resp.raise_for_status()
+        except http_requests.RequestException as exc:
+            return Response(
+                {"detail": f"Failed to fetch departments: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        raw = resp.json()
+        results = raw.get("results", raw) if isinstance(raw, dict) else raw
+
+        departments = [
+            {
+                "department_id": d.get("department_id", ""),
+                "department":    d.get("department", ""),
+            }
+            for d in results
+            if isinstance(d, dict)
+        ]
+
+        payload = {"count": len(departments), "results": departments}
+
+        # Cache for 5 minutes
+        self._cache["data"]       = payload
+        self._cache["expires_at"] = now + 300
+
+        return Response(payload)

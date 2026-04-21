@@ -5,6 +5,8 @@ from .models import Payment
 class PaymentSerializer(serializers.ModelSerializer):
 
     payment_proof_url = serializers.SerializerMethodField(read_only=True)
+    created_by        = serializers.PrimaryKeyRelatedField(read_only=True)
+    created_by_name   = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model  = Payment
@@ -22,11 +24,14 @@ class PaymentSerializer(serializers.ModelSerializer):
             'payment_proof',
             'payment_proof_url',
             'status',
+            'created_by',
+            'created_by_name',
             'date',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'date', 'created_at', 'updated_at', 'payment_proof_url']
+        read_only_fields = ['id', 'date', 'created_at', 'updated_at',
+                            'payment_proof_url', 'created_by', 'created_by_name']
 
     # ── Validation ────────────────────────────────────────────────
 
@@ -56,6 +61,11 @@ class PaymentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.payment_proof and request:
             return request.build_absolute_uri(obj.payment_proof.url)
+        return None
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
         return None
 
 

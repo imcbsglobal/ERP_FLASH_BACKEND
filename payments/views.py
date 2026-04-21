@@ -35,8 +35,17 @@ class PaymentListCreateView(ListCreateAPIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        # Automatically record which user created this payment
+        serializer.save(created_by=request.user if request.user.is_authenticated else None)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # ?my_payments=true  →  return only the authenticated user's payments
+        if self.request.query_params.get('my_payments') == 'true':
+            if self.request.user.is_authenticated:
+                qs = qs.filter(created_by=self.request.user)
+        return qs
 
 
 class PaymentDetailView(RetrieveUpdateDestroyAPIView):

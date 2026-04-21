@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 
 class Payment(models.Model):
@@ -28,6 +29,12 @@ class Payment(models.Model):
     paid_for        = models.CharField(max_length=255)
     notes           = models.TextField(blank=True, default='')
     payment_proof   = models.FileField(upload_to='payment_proofs/', blank=True, null=True)
+    created_by      = models.ForeignKey(
+                        settings.AUTH_USER_MODEL,
+                        on_delete=models.SET_NULL,
+                        null=True, blank=True,
+                        related_name='payments',
+                    )
     status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     date            = models.DateField(auto_now_add=True)
     created_at      = models.DateTimeField(auto_now_add=True)

@@ -41,6 +41,7 @@ urlpatterns = [
 
     path('api/challan/',  include('challan.urls')),
     path('api/claims/',   include('claims.urls')),
+    path('image_capture/', include('imagecapture.urls')),
 ]
 
 if settings.DEBUG:

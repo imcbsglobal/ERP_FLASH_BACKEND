@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'vehiclemaster',
     'vehiclemanagement',
     'challan',
-    'claims'
+    'claims',
+    'imagecapture'
 ]
 
 # ── Middleware ────────────────────────────────────────────────

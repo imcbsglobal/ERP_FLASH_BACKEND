@@ -3,6 +3,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Challan
@@ -24,9 +25,9 @@ class ChallanViewSet(viewsets.ModelViewSet):
     summary : GET    /api/challan/challans/summary/  → counts + totals
     """
 
-    queryset         = Challan.objects.select_related("vehicle").all()
     serializer_class = ChallanSerializer
     parser_classes   = [MultiPartParser, FormParser, JSONParser]
+    permission_classes = [IsAuthenticated]
 
     # ── filtering / search / ordering ────────────────────────────────────────
     filter_backends  = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -35,13 +36,35 @@ class ChallanViewSet(viewsets.ModelViewSet):
     ordering_fields  = ["challan_date", "fine_amount", "created_at", "payment_status"]
     ordering         = ["-created_at"]
 
+    def get_queryset(self):
+        """
+        Admins see all challans.
+        Non-admin users (Manager / User) see only their own challans.
+        Role is read from the custom login.User model stored in the JWT.
+        """
+        user = self.request.user
+        qs = Challan.objects.select_related("vehicle", "created_by").all()
+
+        # Determine role — custom login.User stores role as a plain CharField
+        role = getattr(user, "role", None)
+
+        if role == "Admin":
+            return qs  # Admins see everything
+
+        # Non-admins: only their own challans
+        return qs.filter(created_by=user)
+
+    def perform_create(self, serializer):
+        """Auto-assign created_by to the logged-in user on create."""
+        serializer.save(created_by=self.request.user)
+
     # ── extra action ──────────────────────────────────────────────────────────
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
         """
         Returns aggregate summary used by the list page's stat cards.
-        Supports the same ?payment_status= / ?vehicle= filters.
+        Respects the same queryset scoping (admin vs user).
         """
         qs = self.filter_queryset(self.get_queryset())
 

@@ -17,6 +17,7 @@ class MenuPermissionSerializer(serializers.ModelSerializer):
             "username",
             "dashboard",
             "col_reports",
+            "col_reports_view",
             "vm_trips",
             "vm_service",
             "um_users",
@@ -46,6 +47,7 @@ class MenuPermissionSerializer(serializers.ModelSerializer):
 
     def validate_dashboard(self,   v): return self._bool(v)
     def validate_col_reports(self, v): return self._bool(v)
+    def validate_col_reports_view(self, v): return self._bool(v)
     def validate_vm_trips(self,    v): return self._bool(v)
     def validate_vm_service(self,  v): return self._bool(v)
     def validate_um_users(self,    v): return self._bool(v)
@@ -75,7 +77,7 @@ class LoginUserWithPermissionsSerializer(serializers.ModelSerializer):
     def get_menu_permissions(self, obj):
         _empty = {
             "username": obj.username,
-            "dashboard": False, "col_reports": False,
+            "dashboard": False, "col_reports": False, "col_reports_view": False,
             "vm_trips": False,  "vm_service": False,
             "um_users": False,  "um_roles": False,
             "cl_list": False, "mm_vehicle": False, "allowed_menus": [],

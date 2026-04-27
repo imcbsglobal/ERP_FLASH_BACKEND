@@ -13,7 +13,8 @@ class MenuPermission(models.Model):
     # Dashboard
     dashboard   = models.BooleanField(default=False)
     # Collection
-    col_reports = models.BooleanField(default=False)
+    col_reports      = models.BooleanField(default=False)
+    col_reports_view = models.BooleanField(default=False)
     # Vehicle Management
     vm_trips    = models.BooleanField(default=False)
     vm_service  = models.BooleanField(default=False)
@@ -38,5 +39,5 @@ class MenuPermission(models.Model):
         return f"Permissions(id={self.id})"
 
     def allowed_menus(self):
-        keys = ["dashboard", "col_reports", "vm_trips", "vm_service", "um_users", "um_roles", "mm_vehicle"]
+        keys = ["dashboard", "col_reports", "col_reports_view", "vm_trips", "vm_service", "um_users", "um_roles", "cl_list", "mm_vehicle"]
         return [k for k in keys if getattr(self, k, False)]

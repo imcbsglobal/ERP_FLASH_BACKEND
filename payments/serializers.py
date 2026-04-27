@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import Payment
 
@@ -64,9 +65,31 @@ class PaymentSerializer(serializers.ModelSerializer):
         return None
 
     def get_created_by_name(self, obj):
-        if obj.created_by:
-            return obj.created_by.get_full_name() or obj.created_by.username
-        return None
+        if not obj.created_by:
+            return None
+
+        user = obj.created_by
+
+        # 1. Try get_full_name() — standard Django method
+        try:
+            full = user.get_full_name()
+            if full and full.strip():
+                return full.strip()
+        except AttributeError:
+            pass
+
+        # 2. Try common name fields your custom User model may have
+        for field in ('full_name', 'name', 'first_name'):
+            val = getattr(user, field, None)
+            if val and str(val).strip():
+                return str(val).strip()
+
+        # 3. Fall back to username or email
+        return (
+            getattr(user, 'username', None)
+            or getattr(user, 'email', None)
+            or str(user)
+        )
 
 
 class PaymentStatusUpdateSerializer(serializers.ModelSerializer):

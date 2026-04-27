@@ -51,7 +51,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',  # DISABLED — API uses JWT Bearer tokens
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -113,6 +113,21 @@ USE_TZ = True
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# ── CSRF ──────────────────────────────────────────────────────────────────────
+# CsrfViewMiddleware is disabled above (JWT Bearer token APIs don't need CSRF).
+# CSRF_TRUSTED_ORIGINS kept as a safety net if it is ever re-enabled.
+CSRF_TRUSTED_ORIGINS = [
+    "https://flasherp.in",
+    "https://www.flasherp.in",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+]
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -150,9 +165,22 @@ SIMPLE_JWT = {
 
 # ── CORS ──────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
-    "https://flasherp.in", "https://www.flasherp.in",
-    'http://localhost:5173',    # Vite dev server
-    'http://localhost:3000',
-    'http://127.0.0.1:5173',
+    "https://flasherp.in",
+    "https://www.flasherp.in",
+    "http://localhost:5173",    # Vite dev server
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]

@@ -1,4 +1,5 @@
 from django.db.models              import Sum, Count, Q
+from django.contrib.auth           import get_user_model
 from rest_framework                 import status
 from rest_framework.generics        import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.parsers         import MultiPartParser, FormParser, JSONParser
@@ -10,6 +11,45 @@ import requests
 
 from .models       import Payment
 from .serializers  import PaymentSerializer, PaymentStatusUpdateSerializer
+
+
+# ── JWT user resolver ─────────────────────────────────────────────────────────
+
+def _get_user_id_from_request(request):
+    """
+    Decode the JWT Bearer token from the Authorization header and return the
+    user_id claim (set during login in login/views.py: refresh["user_id"] = user.id).
+    Returns None if the token is absent, invalid, or expired.
+    Authentication is intentionally left as AllowAny on all views; this helper
+    is used only to identify *which* user is making the request so we can
+    filter/assign created_by correctly.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        return None
+    token_str = auth_header.split(" ", 1)[1].strip()
+    try:
+        from rest_framework_simplejwt.tokens import AccessToken
+        token = AccessToken(token_str)
+        # Try 'user_id' first (SimpleJWT default), then fall back to 'id'
+        return token.get("user_id") or token.get("id")
+    except Exception:
+        return None
+
+
+def _get_login_user(request):
+    """
+    Return the AUTH_USER_MODEL instance for the current request's JWT, or None.
+    Uses get_user_model() to always match the same model as the Payment FK.
+    """
+    user_id = _get_user_id_from_request(request)
+    if not user_id:
+        return None
+    try:
+        User = get_user_model()
+        return User.objects.get(pk=user_id)
+    except Exception:
+        return None
 
 
 class PaymentListCreateView(ListCreateAPIView):
@@ -35,16 +75,21 @@ class PaymentListCreateView(ListCreateAPIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        # Automatically record which user created this payment
-        serializer.save(created_by=request.user if request.user.is_authenticated else None)
+        # Resolve the creator from the JWT token (works even with AllowAny auth)
+        creator = _get_login_user(request)
+        serializer.save(created_by=creator)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # ?my_payments=true  →  return only the authenticated user's payments
+        # ?my_payments=true  →  return only this user's payments, resolved via JWT
         if self.request.query_params.get('my_payments') == 'true':
-            if self.request.user.is_authenticated:
-                qs = qs.filter(created_by=self.request.user)
+            user_id = _get_user_id_from_request(self.request)
+            if user_id:
+                qs = qs.filter(created_by_id=user_id)
+            else:
+                # No valid token — return empty queryset for safety
+                qs = qs.none()
         return qs
 
 
@@ -179,7 +224,7 @@ class FlashERPDepartmentsProxyView(APIView):
 
     def get(self, request):
         target_url = self.FLASHERP_DEPARTMENTS_URL
-        
+
         flasherp_token = request.headers.get('X-Flasherp-Token')
         headers = {'Accept': 'application/json'}
         if flasherp_token:
@@ -189,7 +234,7 @@ class FlashERPDepartmentsProxyView(APIView):
             resp = requests.get(target_url, headers=headers, timeout=15)
             resp.raise_for_status()
             return Response(resp.json(), status=resp.status_code)
-            
+
         except requests.exceptions.ConnectionError:
             return Response(
                 {'detail': 'Cannot reach FlashERP server. Check your internet connection.'},

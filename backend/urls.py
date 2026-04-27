@@ -10,8 +10,6 @@ from login.views import (
     MeView,
     RegisterView,
     ChangePasswordView,
-    # UserListView removed — /api/users/ is now fully handled by user.urls
-    # via UserViewSet (which queries the same AUTH_USER_MODEL: usercontrol.CustomUser)
 )
 
 auth_urlpatterns = [
@@ -28,25 +26,23 @@ urlpatterns = [
     path('api/auth/',     include(auth_urlpatterns)),
 
     # ── Users, Branches, Permissions ──────────────────────────────────────────
-    # user.urls registers (in this order, so bulk isn't swallowed by the router):
-    #   PATCH  /api/users/permissions/bulk/     ← BulkMenuPermissionView
-    #   GET    /api/users/                      ← UserViewSet.list
-    #   POST   /api/users/                      ← UserViewSet.create
-    #   GET    /api/users/me/                   ← UserViewSet.me  (logged-in user)
-    #   GET    /api/users/{id}/                 ← UserViewSet.retrieve
-    #   PATCH  /api/users/{id}/                 ← UserViewSet.partial_update
-    #   DELETE /api/users/{id}/                 ← UserViewSet.destroy
-    #   GET    /api/users/{id}/permissions/     ← UserViewSet.permissions_action
-    #   PATCH  /api/users/{id}/permissions/     ← UserViewSet.permissions_action
-    #   *      /api/branches/                   ← BranchViewSet (full CRUD)
     path('api/',          include('user.urls')),
     path('api/',          include('usercontrol.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/',          include('vehiclemaster.urls')),
-    path('api/',          include('vehiclemanagement.urls')),
+
+    # ── Vehicle Management / Travel Trips ──────────────────────────────────────
+    # Mounted at api/travel/ so trips resolve to:
+    #   GET/POST  /api/travel/trips/
+    #   GET/PATCH /api/travel/trips/<id>/
+    #   PATCH     /api/travel/trips/<id>/end/
+    #   GET       /api/travel/trips/ongoing/
+    path('api/travel/',   include('vehiclemanagement.urls')),
+
     path('api/challan/',  include('challan.urls')),
-    path("api/claims/", include("claims.urls")),
+    path('api/claims/',   include('claims.urls')),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

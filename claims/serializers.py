@@ -16,6 +16,9 @@ class ClaimSerializer(serializers.ModelSerializer):
         source="get_expense_type_display", read_only=True
     )
 
+    # Human-readable department name resolved from the external ERP API cache
+    department_name = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Claim
         fields = [
@@ -25,6 +28,7 @@ class ClaimSerializer(serializers.ModelSerializer):
             "expense_type",
             "expense_type_display",
             "department",
+            "department_name",
             "client_name",
             "purpose",
             "amount",
@@ -48,6 +52,16 @@ class ClaimSerializer(serializers.ModelSerializer):
                 return obj.claimed_by.email
             return f"User {obj.claimed_by.id}"
         return None
+
+    def get_department_name(self, obj):
+        """Resolve department_id → human-readable name using the DepartmentListView cache."""
+        from .views import DepartmentListView
+        cache = DepartmentListView._cache.get("data")
+        if cache:
+            for d in cache.get("results", []):
+                if str(d.get("department_id")) == str(obj.department):
+                    return d.get("department", obj.department)
+        return obj.department  # fallback: return the id if cache is empty
 
     def validate_amount(self, value):
         if value <= 0:
@@ -74,6 +88,7 @@ class ClaimListSerializer(serializers.ModelSerializer):
     )
     receipt = serializers.FileField(read_only=True)
     has_receipt = serializers.SerializerMethodField(read_only=True)
+    department_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Claim
@@ -83,6 +98,7 @@ class ClaimListSerializer(serializers.ModelSerializer):
             "expense_type",
             "expense_type_display",
             "department",
+            "department_name",
             "client_name",
             "amount",
             "receipt",
@@ -106,6 +122,16 @@ class ClaimListSerializer(serializers.ModelSerializer):
 
     def get_has_receipt(self, obj):
         return bool(obj.receipt)
+
+    def get_department_name(self, obj):
+        """Resolve department_id → human-readable name using the DepartmentListView cache."""
+        from .views import DepartmentListView
+        cache = DepartmentListView._cache.get("data")
+        if cache:
+            for d in cache.get("results", []):
+                if str(d.get("department_id")) == str(obj.department):
+                    return d.get("department", obj.department)
+        return obj.department  # fallback: return the id if cache is empty
 
 
 class ClaimStatusUpdateSerializer(serializers.ModelSerializer):

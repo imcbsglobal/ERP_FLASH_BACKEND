@@ -4,9 +4,11 @@ from .models import Challan
 
 class ChallanSerializer(serializers.ModelSerializer):
     # Read-only display fields
-    vehicle_display = serializers.SerializerMethodField(read_only=True)
+    vehicle_display     = serializers.SerializerMethodField(read_only=True)
     challan_doc_url     = serializers.SerializerMethodField(read_only=True)
     payment_receipt_url = serializers.SerializerMethodField(read_only=True)
+    # Expose creator's username so the frontend can filter per-user
+    created_by_username = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model  = Challan
@@ -14,6 +16,8 @@ class ChallanSerializer(serializers.ModelSerializer):
             "id",
             "vehicle",
             "vehicle_display",
+            "created_by",
+            "created_by_username",
             "date",
             "challan_no",
             "challan_date",
@@ -29,9 +33,8 @@ class ChallanSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_by", "created_at", "updated_at"]
         extra_kwargs = {
-            # Accept file uploads but don't require on PATCH
             "challan_doc":     {"required": False, "allow_null": True},
             "payment_receipt": {"required": False, "allow_null": True},
         }
@@ -42,14 +45,14 @@ class ChallanSerializer(serializers.ModelSerializer):
         v = obj.vehicle
         if not v:
             return ""
-        # FIX: Use the correct attribute name from your VehicleMaster model
-        # Check what fields your VehicleMaster model has. Common options:
-        # - vehicle_name
-        # - model
-        # - registration_number
-        # Try one of these:
         vehicle_name = getattr(v, 'vehicle_name', '') or getattr(v, 'model', '') or ''
         return f"{v.registration_number} - {vehicle_name}".strip("- ")
+
+    def get_created_by_username(self, obj):
+        if not obj.created_by:
+            return None
+        # Support both Django auth User (username) and custom login.User (username)
+        return getattr(obj.created_by, "username", None)
 
     def _file_url(self, obj, field_name):
         file_field = getattr(obj, field_name)

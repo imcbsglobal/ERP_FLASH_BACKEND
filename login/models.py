@@ -28,9 +28,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     """Custom user model — username-based authentication."""
 
     class Role(models.TextChoices):
-        ADMIN   = 'Admin',   'Admin'
-        MANAGER = 'Manager', 'Manager'
-        USER    = 'User',    'User'
+        ADMIN       = 'Admin',       'Admin'
+        SUPER_ADMIN = 'Super Admin', 'Super Admin'
+        USER        = 'User',        'User'
 
     class Status(models.TextChoices):
         ACTIVE   = 'Active',   'Active'

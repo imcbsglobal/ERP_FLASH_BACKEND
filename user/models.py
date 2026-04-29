@@ -23,9 +23,9 @@ def user_photo_upload_path(instance, filename):
 
 class User(models.Model):
     ROLE_CHOICES = [
-        ("Admin",   "Admin"),
-        ("Manager", "Manager"),
-        ("User",    "User"),
+        ("Admin",       "Admin"),
+        ("Super Admin", "Super Admin"),
+        ("User",        "User"),
     ]
 
     STATUS_CHOICES = [

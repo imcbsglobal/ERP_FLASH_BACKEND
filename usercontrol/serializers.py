@@ -20,9 +20,10 @@ class MenuPermissionSerializer(serializers.ModelSerializer):
             "col_reports_view",
             "vm_trips",
             "vm_service",
+            "cl_list",
+            "image_capture",
             "um_users",
             "um_roles",
-            "cl_list",
             "mm_vehicle",
             "allowed_menus",
             "updated_at",
@@ -45,22 +46,23 @@ class MenuPermissionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Must be a boolean.")
         return value
 
-    def validate_dashboard(self,   v): return self._bool(v)
-    def validate_col_reports(self, v): return self._bool(v)
+    def validate_dashboard(self,        v): return self._bool(v)
+    def validate_col_reports(self,      v): return self._bool(v)
     def validate_col_reports_view(self, v): return self._bool(v)
-    def validate_vm_trips(self,    v): return self._bool(v)
-    def validate_vm_service(self,  v): return self._bool(v)
-    def validate_um_users(self,    v): return self._bool(v)
-    def validate_um_roles(self,    v): return self._bool(v)
-    def validate_cl_list(self,    v): return self._bool(v)
-    def validate_mm_vehicle(self,  v): return self._bool(v)
+    def validate_vm_trips(self,         v): return self._bool(v)
+    def validate_vm_service(self,       v): return self._bool(v)
+    def validate_cl_list(self,          v): return self._bool(v)
+    def validate_image_capture(self,    v): return self._bool(v)
+    def validate_um_users(self,         v): return self._bool(v)
+    def validate_um_roles(self,         v): return self._bool(v)
+    def validate_mm_vehicle(self,       v): return self._bool(v)
 
 
 class LoginUserWithPermissionsSerializer(serializers.ModelSerializer):
     full_name        = serializers.SerializerMethodField()
     photo_url        = serializers.SerializerMethodField()
     menu_permissions = serializers.SerializerMethodField()
-    allowed_menus   = serializers.SerializerMethodField()
+    allowed_menus    = serializers.SerializerMethodField()
 
     class Meta:
         model  = LoginUser
@@ -79,8 +81,9 @@ class LoginUserWithPermissionsSerializer(serializers.ModelSerializer):
             "username": obj.username,
             "dashboard": False, "col_reports": False, "col_reports_view": False,
             "vm_trips": False,  "vm_service": False,
+            "cl_list": False,   "image_capture": False,
             "um_users": False,  "um_roles": False,
-            "cl_list": False, "mm_vehicle": False, "allowed_menus": [],
+            "mm_vehicle": False, "allowed_menus": [],
         }
         try:
             return MenuPermissionSerializer(obj.menu_permissions).data

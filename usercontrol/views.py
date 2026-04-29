@@ -14,7 +14,15 @@ from login.models import User as LoginUser
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_MENU_KEYS = ["dashboard", "col_reports", "col_reports_view", "vm_trips", "vm_service", "um_users", "um_roles", "cl_list", "mm_vehicle"]
+ALLOWED_MENU_KEYS = [
+    "dashboard",
+    "col_reports", "col_reports_view",
+    "vm_trips", "vm_service",
+    "cl_list",
+    "image_capture",
+    "um_users", "um_roles",
+    "mm_vehicle",
+]
 
 def normalize_permission_payload(data):
     """Convert allowed_menus list into explicit booleans for serializer input."""
@@ -96,8 +104,9 @@ class UserPermissionsView(APIView):
                 f"dashboard={saved_perm.dashboard}, col_reports={saved_perm.col_reports}, "
                 f"col_reports_view={saved_perm.col_reports_view}, "
                 f"vm_trips={saved_perm.vm_trips}, vm_service={saved_perm.vm_service}, "
+                f"cl_list={saved_perm.cl_list}, image_capture={saved_perm.image_capture}, "
                 f"um_users={saved_perm.um_users}, um_roles={saved_perm.um_roles}, "
-                f"cl_list={saved_perm.cl_list}, mm_vehicle={saved_perm.mm_vehicle}"
+                f"mm_vehicle={saved_perm.mm_vehicle}"
             )
             return Response(serializer.data)
         except LoginUser.DoesNotExist:

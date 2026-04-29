@@ -36,6 +36,12 @@ class Payment(models.Model):
                         related_name='payments',
                     )
     status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    # Tracks whether cash was physically received by the collector.
+    # Only relevant when collection_type == 'Cash'.
+    # None  → not yet answered (non-cash payments stay None)
+    # True  → collector confirmed cash received
+    # False → collector said cash not yet received
+    cash_received   = models.BooleanField(null=True, blank=True, default=None)
     date            = models.DateField(auto_now_add=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)

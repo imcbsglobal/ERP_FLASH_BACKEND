@@ -25,6 +25,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'payment_proof',
             'payment_proof_url',
             'status',
+            'cash_received',        # ← persists the popup answer (Cash payments only)
             'created_by',
             'created_by_name',
             'date',

@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 from rest_framework import generics, status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -108,12 +109,16 @@ class GenerateLinkView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         expires_in = int(request.data.get("expires_in_hours", 24))
-        link = serializer.save(expires_at=timezone.now() + timedelta(hours=expires_in))
+        link = serializer.save(expires_at=timezone.now() + timedelta(minutes=10))
 
         # Return the richer detail serializer (includes link_path + resolved name)
         detail = CaptureLinkDetailSerializer(link, context={"request": request})
         payload = detail.data
-        payload["link_full"] = request.build_absolute_uri(link.link_path)
+        # Always build the link pointing directly to the Image Capture page.
+        # link.link_path points to /phone-verify/... — override it here.
+        capture_path = f"/image_capture/capture/{link.uuid}"
+        payload["link_full"] = request.build_absolute_uri(capture_path)
+        payload["link_path"] = capture_path
         return Response(payload, status=status.HTTP_201_CREATED)
 
 
@@ -124,9 +129,10 @@ class CaptureLinkDetailView(generics.RetrieveAPIView):
     customer name + phone for ImageCaptureFlow props.
     Returns 410 if the link has expired.
     """
-    queryset         = CaptureLink.objects.all()
-    serializer_class = CaptureLinkDetailSerializer
-    lookup_field     = "uuid"
+    queryset           = CaptureLink.objects.all()
+    serializer_class   = CaptureLinkDetailSerializer
+    lookup_field       = "uuid"
+    permission_classes = [AllowAny]
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -143,7 +149,10 @@ class CaptureLinkDetailView(generics.RetrieveAPIView):
 
         serializer = self.get_serializer(instance, context={"request": request})
         payload = serializer.data
-        payload["link_full"] = request.build_absolute_uri(instance.link_path)
+        # Always return the direct capture URL — not the phone-verify URL.
+        capture_path = f"/image_capture/capture/{instance.uuid}"
+        payload["link_full"] = request.build_absolute_uri(capture_path)
+        payload["link_path"] = capture_path
         return Response(payload)
 
 
@@ -175,6 +184,7 @@ class SendOtpView(APIView):
     Request  : { phone, uuid? }
     Response : { detail: "OTP sent successfully." }
     """
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = OtpSendSerializer(data=request.data)
@@ -231,6 +241,7 @@ class VerifyOtpView(APIView):
         410  { detail: "OTP has expired..." }
         429  { detail: "Too many failed attempts..." }
     """
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = OtpVerifySerializer(data=request.data)
@@ -293,6 +304,7 @@ class ResendOtpView(APIView):
     Otp_verification.jsx → resendOtp()
     Internally reuses the same send logic.
     """
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         return SendOtpView().post(request, *args, **kwargs)
@@ -311,8 +323,9 @@ class UploadImageView(generics.CreateAPIView):
                  address, customer_name, phone
     Returns the verify_success.jsx data shape on success.
     """
-    parser_classes   = [MultiPartParser, FormParser]
-    serializer_class = ImageCaptureUploadSerializer
+    parser_classes     = [MultiPartParser, FormParser]
+    serializer_class   = ImageCaptureUploadSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -359,14 +372,23 @@ class ImageCaptureListView(generics.ListAPIView):
         return qs
 
 
-class ImageCaptureDetailView(generics.RetrieveAPIView):
+class ImageCaptureDetailView(generics.RetrieveDestroyAPIView):
     """
-    GET /api/captures/<pk>/
-    Full record — mirrors verify_success.jsx data: customerName,
-    phone, preview (image URL), address, lat, lng, verifiedAt.
+    GET    /api/captures/<pk>/   Full record detail.
+    DELETE /api/captures/<pk>/   Permanently remove a capture record
+                                 (also deletes the image file from disk).
     """
     queryset         = ImageCapture.objects.all()
     serializer_class = ImageCaptureDetailSerializer
+
+    def perform_destroy(self, instance):
+        # Delete the image file from disk before removing the DB row
+        if instance.image:
+            try:
+                instance.image.delete(save=False)
+            except Exception:
+                pass
+        instance.delete()
 
 
 class ManualStatusUpdateView(generics.UpdateAPIView):

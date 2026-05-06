@@ -33,6 +33,7 @@ class CaptureLinkCreateSerializer(serializers.ModelSerializer):
         source="customer",
         required=False,
         allow_null=True,
+        default=None,
         write_only=True,
     )
 
@@ -149,7 +150,12 @@ class ImageCaptureUploadSerializer(serializers.ModelSerializer):
         image, uuid, latitude, longitude, address,
         customer_name (optional), phone (optional)
     """
-    uuid = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    uuid          = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+    customer_name = serializers.CharField(required=False, allow_blank=True, default="")
+    phone         = serializers.CharField(required=False, allow_blank=True, default="")
+    latitude      = serializers.DecimalField(max_digits=18, decimal_places=15, required=False, allow_null=True)
+    longitude     = serializers.DecimalField(max_digits=18, decimal_places=15, required=False, allow_null=True)
+    address       = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
         model  = ImageCapture

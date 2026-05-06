@@ -18,6 +18,7 @@ Otp_verification.jsx    resendOtp()         POST    api/resend-otp/
 Image_add.jsx           handleUpload()      POST    api/upload-image/
 imgcapture_list.jsx     table rows          GET     api/captures/
 verify_success.jsx      detail view         GET     api/captures/<pk>/
+imgcapture_list.jsx     delete record       DELETE  api/captures/<pk>/
 imgcapture_list.jsx     approve/reject      PATCH   api/captures/<pk>/manual-status/
 """
 from django.urls import path

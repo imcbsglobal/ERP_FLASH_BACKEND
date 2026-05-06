@@ -145,8 +145,8 @@ class ImageCapture(models.Model):
     image               = models.ImageField(upload_to="captures/%Y/%m/%d/")
 
     # GPS data from Image_capture.jsx reverseGeocode()
-    latitude            = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
-    longitude           = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    latitude            = models.DecimalField(max_digits=18, decimal_places=15, null=True, blank=True)
+    longitude           = models.DecimalField(max_digits=18, decimal_places=15, null=True, blank=True)
     address             = models.TextField(blank=True)
 
     verification_status = models.CharField(

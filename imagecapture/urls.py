@@ -27,13 +27,6 @@ urlpatterns = [
         name="imagecapture-link-detail",
     ),
 
-    # ✅ ADD THIS ROUTE
-    path(
-        "capture/<uuid:uuid>/",
-        views.CaptureLinkDetailView.as_view(),
-        name="imagecapture-capture-page",
-    ),
-
     path(
         "api/capture-links/",
         views.CaptureLinkListView.as_view(),

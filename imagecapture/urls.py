@@ -1,26 +1,3 @@
-"""
-imagecapture/urls.py
-
-Include in collection_backend/urls.py with:
-    path("image_capture/", include("imagecapture.urls")),
-
-Frontend ↔ Backend URL map
-──────────────────────────────────────────────────────────────────
-Component               Action              Method  Path
-──────────────────────────────────────────────────────────────────
-Image_link.jsx          customer dropdown   GET     api/customers/
-Image_link.jsx          handleGenerate()    POST    api/generate-link/
-imgcapture_list.jsx     link overview       GET     api/capture-links/
-ImageCaptureFlow        page load (uuid)    GET     api/capture-link/<uuid>/
-phoneverify.jsx         handleSend()        POST    api/send-otp/
-Otp_verification.jsx    verifyOtpWithCode() POST    api/verify-otp/
-Otp_verification.jsx    resendOtp()         POST    api/resend-otp/
-Image_add.jsx           handleUpload()      POST    api/upload-image/
-imgcapture_list.jsx     table rows          GET     api/captures/
-verify_success.jsx      detail view         GET     api/captures/<pk>/
-imgcapture_list.jsx     delete record       DELETE  api/captures/<pk>/
-imgcapture_list.jsx     approve/reject      PATCH   api/captures/<pk>/manual-status/
-"""
 from django.urls import path
 from . import views
 
@@ -43,11 +20,20 @@ urlpatterns = [
         views.GenerateLinkView.as_view(),
         name="imagecapture-generate-link",
     ),
+
     path(
         "api/capture-link/<uuid:uuid>/",
         views.CaptureLinkDetailView.as_view(),
         name="imagecapture-link-detail",
     ),
+
+    # ✅ ADD THIS ROUTE
+    path(
+        "capture/<uuid:uuid>/",
+        views.CaptureLinkDetailView.as_view(),
+        name="imagecapture-capture-page",
+    ),
+
     path(
         "api/capture-links/",
         views.CaptureLinkListView.as_view(),
